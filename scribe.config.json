@@ -1,0 +1,25 @@
+{
+  "sqlplus_path": "sqlplus",
+  "sessions_dir": "sessions",
+  "bootstrap_commands": [
+    "SET LINESIZE 200",
+    "SET PAGESIZE 1000",
+    "SET SERVEROUTPUT ON",
+    "SET SQLPROMPT '(Scribe) SQL> '"
+  ],
+  "aliases": {
+    "cls": "CLEAR SCREEN",
+    "clrscr": "CLEAR SCREEN",
+    "wipe": "CLEAR SCREEN",
+    "show tables": "SELECT table_name\nFROM user_tables\nORDER BY table_name;"
+  },
+  "ignore_export_commands": [
+    "CLEAR SCREEN",
+    "cls",
+    "clrscr",
+    "wipe"
+  ],
+  "export": {
+    "title": "Session"
+  }
+}

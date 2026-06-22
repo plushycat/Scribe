@@ -1,0 +1,12 @@
+# Session transcripts, exports, and metadata
+sessions/
+
+# Planning docs
+updated_plan.md
+
+# Local tooling config
+.openclaude/
+
+# Bytecode cache
+__pycache__/
+*.pyc
