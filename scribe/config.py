@@ -23,6 +23,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "ignore_export_commands": ["CLEAR SCREEN", "cls", "clrscr", "wipe"],
     "export": {"title": "Session"},
+    "ctrl_c_exit": True,
 }
 
 
@@ -34,6 +35,7 @@ class Config:
     aliases: dict[str, str] = field(default_factory=dict)
     ignore_export_commands: set[str] = field(default_factory=set)
     export_title: str = "Session"
+    ctrl_c_exit: bool = True
 
     @classmethod
     def load(cls, path: str | Path) -> "Config":
@@ -46,6 +48,7 @@ class Config:
             aliases={str(k): str(v) for k, v in data.get("aliases", {}).items()},
             ignore_export_commands={normalize_command(v) for v in data.get("ignore_export_commands", [])},
             export_title=str(export.get("title", "Session")),
+            ctrl_c_exit=bool(data.get("ctrl_c_exit", True)),
         )
 
 

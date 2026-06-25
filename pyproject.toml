@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scribe"
+version = "0.1.0"
+description = "Lightweight Windows-first SQL*Plus session recorder"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.scripts]
+scribe = "scribe.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["scribe*"]

@@ -12,12 +12,14 @@ def export_markdown(session: SessionState, title: str, ignore_commands: set[str]
 
     sections.append(f"\n## Export\n\nGenerated: {iso_now()}\n")
 
-    for note in session.notes:
+    new_notes = session.notes[session.exported_notes_count:]
+    for note in new_notes:
         sections.append("\n## Note\n\n")
         sections.append(note.text.strip() + "\n")
 
     exported = 0
-    for event in session.commands:
+    new_commands = session.commands[session.exported_commands_count:]
+    for event in new_commands:
         if should_ignore(event.text, ignore_commands):
             continue
         sections.append("\n## Query\n\n```sql\n")
@@ -32,13 +34,15 @@ def export_markdown(session: SessionState, title: str, ignore_commands: set[str]
 
         exported += 1
 
-    if exported == 0 and not session.notes:
+    if exported == 0 and not new_notes:
         sections.append("\n_No exportable commands or notes yet._\n")
 
     with session.markdown_path.open("a", encoding="utf-8", newline="\n") as output:
         output.write("".join(sections))
 
     session.exports.append(iso_now())
+    session.exported_commands_count = len(session.commands)
+    session.exported_notes_count = len(session.notes)
     session.save()
     return exported
 

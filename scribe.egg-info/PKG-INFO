@@ -1,3 +1,11 @@
+Metadata-Version: 2.4
+Name: scribe
+Version: 0.1.0
+Summary: Lightweight Windows-first SQL*Plus session recorder
+License: MIT
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
 # Scribe
 
 Scribe is a lightweight Windows-first SQL\*Plus session recorder. It launches SQL\*Plus as a child process, records a live raw transcript, supports `/scribe` internal commands, and stores session data on disk — using only the Python standard library.
@@ -5,49 +13,28 @@ Scribe is a lightweight Windows-first SQL\*Plus session recorder. It launches SQ
 ## Quick Start
 
 ```powershell
-scribe
+python -m scribe
 ```
 
-Pass SQL\*Plus arguments directly:
+Pass SQL\*Plus arguments after `--`:
 
 ```powershell
-scribe hr/tiger
+python -m scribe -- scott/tiger@orcl
 ```
 
 Use a custom SQL\*Plus executable:
 
 ```powershell
-scribe --sqlplus C:\oracle\product\11.2.0\dbhome_1\BIN\sqlplus.exe -- hr/tiger
+python -m scribe --sqlplus C:\oracle\product\11.2.0\dbhome_1\BIN\sqlplus.exe -- scott/tiger@orcl
 ```
 
 If SQL\*Plus requires elevation, relaunch Scribe through UAC:
 
 ```powershell
-scribe --elevate -- hr/tiger
-```
-
-You can also run via Python module:
-
-```powershell
-python -m scribe --elevate -- hr/tiger
+python -m scribe --elevate -- scott/tiger@orcl
 ```
 
 Password prompts are detected automatically and masked with `∎`.
-
-## Installation
-
-```powershell
-pip install -e .
-```
-
-This makes `scribe` available as a global command in any PowerShell window.
-
-To build a standalone executable (no Python required on target):
-
-```powershell
-pip install pyinstaller
-pyinstaller --onefile --name scribe -m scribe
-```
 
 ## Startup Options
 
@@ -64,60 +51,13 @@ Internal commands are consumed by Scribe and are not forwarded to SQL\*Plus.
 
 | Command | Description |
 |---|---|
-| `scribe status` | Show session info (id, paths, counts) |
-| `scribe note <text>` | Attach a note to the current session |
-| `scribe export` | Export commands to Markdown (incremental) |
-| `scribe search <term>` | Search past session transcripts |
-| `scribe history` | Show recent commands |
-| `scribe bootstrap` | Re-run SQL\*Plus setup commands |
-| `scribe help` | Show this help |
-
-The `/scribe` prefix also works for backwards compatibility.
-
-## Color Output
-
-Scribe uses truecolor hex ANSI codes for terminal coloring. Colors auto-detect (enabled when stdout is a TTY) and can be toggled via config.
-
-SQL input is colorized in real-time as you type — keywords light up on word boundary, similar to VSCode.
-
-| Element | Color | Hex |
-|---|---|---|
-| SQL keywords | Blue | `#61AFEF` |
-| Strings | Green | `#98C379` |
-| Numbers | Orange | `#D19A66` |
-| Operators / `;` | Cyan | `#56B6C2` |
-| ORA-/SP2- errors | Red | `#E06C75` |
-| Scribe messages | Purple | `#C678DD` |
-| SQL prompt | Blue | `#61AFEF` |
-
-Color can be disabled in `scribe.config.json`:
-
-```json
-{
-  "ui": {
-    "color": false
-  }
-}
-```
-
-## Aliases
-
-User-configurable shortcuts that expand before being sent to SQL\*Plus. The expansion is printed in purple so you always see what was substituted.
-
-`cls`, `CLEAR SCREEN`, and similar commands are handled by Scribe directly — the terminal clears immediately without relying on SQL\*Plus output.
-
-```json
-{
-  "aliases": {
-    "cls": "CLEAR SCREEN",
-    "show tables": "SELECT table_name\nFROM user_tables\nORDER BY table_name;"
-  }
-}
-```
-
-## Export
-
-`/scribe export` appends new commands and notes to a Markdown file. Each export only includes content added since the last export — no duplicates.
+| `/scribe status` | Show session info (id, paths, counts) |
+| `/scribe note <text>` | Attach a note to the current session |
+| `/scribe export` | Export commands to Markdown |
+| `/scribe search <term>` | Search past session transcripts |
+| `/scribe history` | Show recent commands |
+| `/scribe bootstrap` | Re-run SQL\*Plus setup commands |
+| `/scribe help` | Show this help |
 
 ## Configuration
 
@@ -142,14 +82,9 @@ Default configuration is created at `scribe.config.json` on first run:
   "ignore_export_commands": ["CLEAR SCREEN", "cls", "clrscr", "wipe"],
   "export": {
     "title": "Session"
-  },
-  "ctrl_c_exit": true
+  }
 }
 ```
-
-| Key | Default | Description |
-|---|---|---|
-| `ctrl_c_exit` | `true` | When `false`, Ctrl+C is ignored during input. Use `exit` or `quit` to leave. |
 
 ## Session Files
 
@@ -168,7 +103,6 @@ scribe/
 ├── __init__.py       # Package init, version (0.1.0)
 ├── __main__.py       # Entry point: python -m scribe
 ├── cli.py            # Argument parser, main orchestrator
-├── color.py          # Truecolor ANSI formatting, SQL tokenizer
 ├── config.py         # Config dataclass, defaults, JSON load
 ├── elevation.py      # UAC elevation via PowerShell Start-Process
 ├── exporter.py       # Markdown export, history rendering
@@ -179,8 +113,32 @@ tests/
 ├── test_elevation.py
 ├── test_exporter.py
 └── test_search.py
-pyproject.toml        # Package metadata, console script entry point
 ```
+
+## Color Indicators (Future)
+
+Color highlights can make session output easier to read at a glance. A future
+version may support opt-in color for:
+
+- **Scribe output** — internal command responses printed in a distinct color
+- **SQL\*Plus errors** — lines matching `ORA-`, `SP2-`, etc. highlighted in red
+- **Prompts** — the `(Scribe) SQL>` prompt in a subdued or branded color
+
+Coloring would be controlled by a new `"ui"` section in `scribe.config.json`,
+defaulting to off so the base experience is unchanged:
+
+```json
+{
+  "ui": {
+    "color": false,
+    "scribe": "cyan",
+    "error": "red",
+    "prompt": "bright_black"
+  }
+}
+```
+
+A config-less run would continue to output plain text exactly as it does today.
 
 ## Requirements
 

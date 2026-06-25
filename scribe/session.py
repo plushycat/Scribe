@@ -24,6 +24,8 @@ class SessionState:
     notes: list[SessionEvent] = field(default_factory=list)
     commands: list[SessionEvent] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
+    exported_commands_count: int = 0
+    exported_notes_count: int = 0
     ended_at: str | None = None
     exit_code: int | None = None
 

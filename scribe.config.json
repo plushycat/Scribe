@@ -5,7 +5,7 @@
     "SET LINESIZE 200",
     "SET PAGESIZE 1000",
     "SET SERVEROUTPUT ON",
-    "SET SQLPROMPT '(Scribe) SQL> '"
+    "SET SQLPROMPT '⌀ SQL> '"
   ],
   "aliases": {
     "cls": "CLEAR SCREEN",
@@ -21,5 +21,6 @@
   ],
   "export": {
     "title": "Session"
-  }
+  },
+  "ctrl_c_exit": true
 }
