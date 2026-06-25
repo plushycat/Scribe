@@ -171,7 +171,7 @@ def colorize_scribe(text: str) -> str:
     return fg(text, COLORS["scribe"])
 
 
-_PROMPT_RE = re.compile(r"(\S+\s+SQL>\s?)")
+_PROMPT_RE = re.compile(r"(\S+\s+\S+>\s?)")
 
 
 def colorize_prompt(text: str) -> str:

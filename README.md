@@ -74,6 +74,21 @@ Internal commands are consumed by Scribe and are not forwarded to SQL\*Plus.
 
 The `/scribe` prefix also works for backwards compatibility.
 
+## Input Editing
+
+Scribe provides a full line-editing experience while typing SQL commands:
+
+| Key | Action |
+|---|---|
+| Left/Right arrows | Move cursor through the input |
+| Up/Down arrows | Navigate command history |
+| Backspace | Delete character before cursor |
+| Delete | Delete character at cursor |
+| Enter | Execute the command |
+| Ctrl+C | Interrupt (configurable via `ctrl_c_exit`) |
+
+The SQL prompt (e.g., `SQL> `, `hr@ORCL> `) is captured dynamically from SQL\*Plus and preserved with its original color during redraws.
+
 ## Color Output
 
 Scribe uses truecolor hex ANSI codes for terminal coloring. Colors auto-detect (enabled when stdout is a TTY) and can be toggled via config.

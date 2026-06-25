@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import msvcrt
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -15,7 +16,7 @@ _CLEAR_SCREEN_CMDS: set[str] = {
     normalize_command("CLEAR SCREEN"),
 }
 
-_ANSI_CLEAR = "\033[2J\033[H"
+_ANSI_CLEAR = "\033[2J\033[3J\033[H"
 from .exporter import export_markdown, render_history
 from .search import search_sessions
 from .session import SessionEvent, SessionState, iso_now
@@ -150,6 +151,8 @@ class ScribeHost:
             ch = msvcrt.getch()
             if ch in {b"\x00", b"\xe0"}:
                 arrow = msvcrt.getch()
+                if not self._prompt:
+                    continue
                 if arrow == b"H":
                     self._history_navigate(buf, out, -1)
                     cursor = len(buf)
@@ -176,12 +179,18 @@ class ScribeHost:
                 if line.strip():
                     self._history.append(line)
                 self._history_index = len(self._history)
+                self._prompt = ""
                 return line, False
             if ch == b"\x08":
-                if cursor > 0:
-                    cursor -= 1
-                    del buf[cursor]
-                    self._redraw_input(buf, cursor, out)
+                if buf:
+                    if self._prompt:
+                        cursor -= 1
+                        del buf[cursor]
+                        self._redraw_input(buf, cursor, out)
+                    else:
+                        buf.pop()
+                        out.write(b"\b \b")
+                        out.flush()
                 continue
             if ch == b"\x03":
                 if self.config.ctrl_c_exit:
@@ -190,9 +199,14 @@ class ScribeHost:
             if ch[0] < 32:
                 continue
             text = ch.decode("utf-8", errors="replace")
-            buf.insert(cursor, text)
-            cursor += 1
-            self._redraw_input(buf, cursor, out)
+            if self._prompt:
+                buf.insert(cursor, text)
+                cursor += 1
+                self._redraw_input(buf, cursor, out)
+            else:
+                buf.append(text)
+                out.write(text.encode("utf-8"))
+                out.flush()
 
     def _redraw_input(self, buf: list[str], cursor: int, out) -> None:
         text = "".join(buf)
@@ -287,9 +301,11 @@ class ScribeHost:
             if len(self._output_buf) > 100:
                 self._output_buf = self._output_buf[-100:]
             stripped = strip_color(buf).rstrip("\n\r")
-            if stripped.endswith("SQL>") or stripped.endswith("SQL> "):
-                self._prompt = "SQL> "
-                self._prompt_colored = colorize_prompt("SQL> ")
+            m = re.search(r"^(.*?>\s?)$", stripped, re.MULTILINE)
+            if m:
+                raw = m.group(1)
+                self._prompt = raw
+                self._prompt_colored = colorize_prompt(raw)
 
     def _handle_internal(self, line: str) -> bool:
         stripped = line.strip()
