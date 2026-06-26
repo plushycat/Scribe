@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import msvcrt
+import os
 import queue
 import re
 import subprocess
@@ -202,6 +203,15 @@ class ScribeHost:
             if self._prompt:
                 buf.insert(cursor, text)
                 cursor += 1
+                while msvcrt.kbhit():
+                    next_ch = msvcrt.getch()
+                    if next_ch in {b"\r", b"\n", b"\x08", b"\x03"} or next_ch[0] < 32:
+                        break
+                    if next_ch in {b"\x00", b"\xe0"}:
+                        msvcrt.getch()
+                        break
+                    buf.insert(cursor, next_ch.decode("utf-8", errors="replace"))
+                    cursor += 1
                 self._redraw_input(buf, cursor, out)
             else:
                 buf.append(text)
@@ -210,13 +220,29 @@ class ScribeHost:
 
     def _redraw_input(self, buf: list[str], cursor: int, out) -> None:
         text = "".join(buf)
-        out.write(b"\r\033[2K")
+        # Terminal width for computing line wrapping
+        try:
+            cols = os.get_terminal_size().columns
+        except OSError:
+            cols = 80
+        prompt_len = len(strip_color(self._prompt_colored or self._prompt))
+        # How many visual lines above the cursor line does the input span?
+        lines_above = (prompt_len + cursor) // cols
+        # Move up to the first line of the input, then go to column 0
+        if lines_above > 0:
+            out.write(f"\033[{lines_above}A".encode("utf-8"))
+        out.write(b"\r")
+        # Clear from cursor position to end of screen (handles all wrapped lines)
+        out.write(b"\033[J")
+        # Redraw prompt
         if self._prompt_colored:
             out.write(self._prompt_colored.encode("utf-8"))
         else:
             out.write(self._prompt.encode("utf-8"))
+        # Redraw text with SQL syntax highlighting
         if text:
             out.write(colorize_sql(text).encode("utf-8"))
+        # Position cursor
         move_back = len(buf) - cursor
         if move_back > 0:
             out.write(b"\b" * move_back)
@@ -255,15 +281,14 @@ class ScribeHost:
         self._bootstrap_done = True
         process = self._process
         log = self._log
-        cmds = self.config.bootstrap_commands
-        for i, cmd in enumerate(cmds):
+        for i, cmd in enumerate(self.config.bootstrap_commands):
             try:
                 process.stdin.write((cmd + "\n").encode("utf-8"))
                 process.stdin.flush()
             except (OSError, BrokenPipeError):
                 break
             time.sleep(0.3)
-            if i == len(cmds) - 1:
+            if i == len(self.config.bootstrap_commands) - 1:
                 self._drain_output(log)
             else:
                 self._drain_silent(log)
@@ -301,7 +326,10 @@ class ScribeHost:
             if len(self._output_buf) > 100:
                 self._output_buf = self._output_buf[-100:]
             stripped = strip_color(buf).rstrip("\n\r")
+            # Match primary prompts (Ø SQL>) or continuation prompts (  2  )
             m = re.search(r"^(.*?>\s?)$", stripped, re.MULTILINE)
+            if not m:
+                m = re.search(r"^(\s*\d+\s+)", stripped, re.MULTILINE)
             if m:
                 raw = m.group(1)
                 self._prompt = raw
@@ -387,9 +415,24 @@ class ScribeHost:
 
     @staticmethod
     def _colorize_output(text: str) -> str:
-        text = colorize_error(text)
-        text = colorize_prompt(text)
-        return text
+        lines = text.splitlines(keepends=True)
+        result = []
+        for line in lines:
+            # Error lines: color entire line red, skip SQL colorization
+            error_colored = colorize_error(line)
+            if error_colored != line:
+                result.append(error_colored)
+                continue
+            # Prompt lines: split prompt from SQL, colorize each part separately
+            m = re.match(r"(\S+\s+\S+>\s?)", line)
+            if m:
+                prompt_part = colorize_prompt(line[:m.end()])
+                sql_part = colorize_sql(line[m.end():])
+                result.append(prompt_part + sql_part)
+                continue
+            # Plain output: apply SQL colorization
+            result.append(colorize_sql(line))
+        return "".join(result)
 
     @staticmethod
     def _log_line(log, text: str) -> None:

@@ -10,3 +10,8 @@ updated_plan.md
 # Bytecode cache
 __pycache__/
 *.pyc
+
+# Package build artifacts
+*.egg-info/
+dist/
+build/
